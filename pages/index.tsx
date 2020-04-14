@@ -1,13 +1,14 @@
-import * as E from "fp-ts/lib/Either";
-import React from "react";
-import { Product } from "../types";
+import * as E from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/pipeable';
+import React from 'react';
+import { Product } from '../types';
 
 const Home = () => {
   const createProduct = () => {
     // Create a new product.
     const product: Product = {
-      name: "First",
-      release: new Date()
+      name: 'First',
+      release: new Date(),
     };
 
     // Send it to the server. But JSON stringify is not enough.
@@ -18,9 +19,9 @@ const Home = () => {
     const deserializedProduct = JSON.parse(serializedProduct);
 
     // io-ts not only safely decodes types, but also encodes them.
-    // Encoding is defined by Product codec, `release` is encoded as iso string.
+    // Encoding is defined by Product codec.
     const encodedProduct = Product.encode(product);
-    // We can decode anything safely.
+    // We can decode anything safely because of Either.
     const decodedProduct = Product.decode(encodedProduct);
     // https://gcanti.github.io/fp-ts/modules/Either.ts.html
     if (E.isRight(decodedProduct)) {
@@ -29,26 +30,38 @@ const Home = () => {
     }
 
     // Send the encoded product to the server.
-    // JSON.stringify is safe on encoded values.
-    // Note `release` is DateFromISOString type, but it could be
-    // DateFromUnixTime or anything else with custom encoding.
-    fetch("/api/createProduct", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(encodedProduct)
+    // Now go to `api/createProduct.ts` file.
+    fetch('/api/createProduct', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // JSON.stringify is safe on encoded values.
+      body: JSON.stringify(encodedProduct),
     })
       .then(response => response.json())
-      .then(json => {
-        console.log(json);
-      });
+      .then(json =>
+        pipe(
+          Product.decode(json),
+          E.fold(
+            error => {
+              // error is t.Errors only.
+              // To catch fetch error, we would have to make functional fetch
+              // just like client.fetch in createProduct.ts
+              console.log(error);
+            },
+            product => {
+              // Awesome. Everything works as expected.
+              console.log(product.release.getHours());
+              console.log(product);
+            },
+          ),
+        ),
+      );
   };
 
   return (
     <div>
       <h1>Typed functional programming with Fauna DB</h1>
       <button onClick={createProduct}>Create a Product</button>
-      {/* <br />
-      <button>Save a Product</button> */}
     </div>
   );
 };
