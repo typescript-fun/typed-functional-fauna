@@ -1,7 +1,6 @@
 import * as t from 'io-ts';
 import { either } from 'io-ts-types/lib/either';
 import {
-  faunaDoc,
   FaunaDocRef,
   FaunaError,
   FaunaTime,
